@@ -7,10 +7,12 @@ import configparser
 
 #import discord
 import pydub
+from pydub.effects import speedup
 #from discord import app_commands
 import nextcord
 from nextcord.ext import commands
 from nextcord import application_command
+from datetime import datetime
 
 # test
 from config import BOT
@@ -38,16 +40,20 @@ async def speedup_message(message, speed):
 	if message.attachments[0].content_type != "audio/ogg":
 		await message.reply("Ay Caramba ! Ton message n'a l'air de ne contenir aucun audio..", mention_author=False)
 		return
-	msg = await message.reply("✨ Accelerating...", mention_author=False)
+	msg = await message.reply("🐁💨 Acceleratioooonnnn...", mention_author=False)
     # Read voice file and converts it into something pydub can work with
 	voice_file_bytes = await message.attachments[0].read()
 	voice_file = io.BytesIO(voice_file_bytes)
 	
 	# Convert original .ogg file into a .wav file
 	x = pydub.AudioSegment.from_file(voice_file)
-	final = pydub.speedup(x, playback_speed=(speed))
-	await final.export("C:/Users/Aurore/Documents/project/Bot-Speed-Audio/temp/final.mp3",format="mp3")
-	await msg.edit(content="test", attachments=[nextcord.File('C:/Users/Aurore/Documents/project/Bot-Speed-Audio/temp/final.mp3')])
+	final = speedup(x, playback_speed=(speed))
+	buffer = io.BytesIO()
+	timenow = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
+	#final.export("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/temp/"+ timenow +".mp3",format="mp3")
+	final.export(buffer, format="mp3")
+	nextcordFile = nextcord.File(fp=buffer ,filename=timenow + '.mp3')
+	await msg.edit(content="Acceleration x"+str(speed)+" terminée Amigos ! :cowboy: ", file=nextcordFile)
     #new = io.BytesIO()
 	#await bot.loop.run_in_executor(None, functools.partial(x.export, new, format='wav'))
 
