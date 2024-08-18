@@ -4,7 +4,7 @@ import re
 import sys
 import functools
 import configparser
-
+from moviepy.editor import AudioFileClip, ImageClip
 #import discord
 import pydub
 from pydub.effects import speedup
@@ -13,10 +13,15 @@ import nextcord
 from nextcord.ext import commands
 from nextcord import application_command
 from datetime import datetime
+import cv2
+import numpy
+from unidecode import unidecode
+from datetime import timezone, datetime, timedelta
 
 # test
 from config import BOT
 from pydub import AudioSegment
+from pydub.silence import split_on_silence
 
 BOT_TOKEN = BOT['TOKEN'];
 default_guild_ids = [458374228023050252]
@@ -40,20 +45,52 @@ async def speedup_message(message, speed):
 	if message.attachments[0].content_type != "audio/ogg":
 		await message.reply("Ay Caramba ! Ton message n'a l'air de ne contenir aucun audio..", mention_author=False)
 		return
-	msg = await message.reply("🐁💨 Acceleratioooonnnn...", mention_author=False)
+	#msg = await message.reply("🐁💨 Acceleratioooonnnn...", mention_author=False)
     # Read voice file and converts it into something pydub can work with
 	voice_file_bytes = await message.attachments[0].read()
 	voice_file = io.BytesIO(voice_file_bytes)
+	avatar_bytes = await message.author.avatar.read()
+	banner = cv2.imread("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/ImageToVideo.jpg")
+	BytesToImg = numpy.fromstring(io.BytesIO(avatar_bytes).read(), numpy.uint8)
+	avatar_cv = cv2.resize(cv2.imdecode(BytesToImg, cv2.IMREAD_COLOR),(100,100), cv2.INTER_LINEAR)
+	banner[20:120,20:120]=avatar_cv
+	banner = cv2.putText(banner, "Speed : x" + str(speed), (220,45), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255,255,255), 1, cv2.LINE_AA)
+	banner = cv2.putText(banner, "In " + unidecode(str(message.channel.name)) + " at " + str(message.created_at.astimezone(timezone(timedelta(hours=2))).strftime('%Y-%m-%d %H:%M:%S')), (140,100), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255,255,255), 1, cv2.LINE_AA)
+
 	
 	# Convert original .ogg file into a .wav file
 	x = pydub.AudioSegment.from_file(voice_file)
-	final = speedup(x, speed,150,25)
+	#final = speedup(x, speed,150,25)
+
+	# Diviser l'audio en segments en fonction des silences
+	chunks = split_on_silence(x, min_silence_len=200, silence_thresh=-40)
+
+# Accélérer chaque segment individuellement
+	accelerated_chunks = [speedup(chunk, playback_speed=speed, chunk_size=50, crossfade=10) for chunk in chunks]
+
+# Rejoindre les segments accélérés avec un léger fondu pour maintenir la fluidité
+	final = AudioSegment.silent(duration=0)
+	for chunk in accelerated_chunks:
+		final += chunk + AudioSegment.silent(duration=10)
+
 	buffer = io.BytesIO()
 	timenow = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
-	#final.export("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/temp/"+ timenow +".mp3",format="mp3")
-	final.export(buffer, format="mp3")
-	nextcordFile = nextcord.File(fp=buffer ,filename=timenow + '.mp3')
-	await msg.edit(content="Acceleration x"+str(speed)+" terminée Amigos ! :cowboy: ", file=nextcordFile)
+	final.export("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/temp/"+ timenow +".mp3",format="mp3")
+	banner = cv2.putText(banner, "Duration : "+ str(pydub.AudioSegment.__len__(final)/1000) + "s", (220,70), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255,255,255), 1, cv2.LINE_AA)
+
+	audio_clip = AudioFileClip("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/temp/"+ timenow +".mp3")
+	cv2.imwrite("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/temp/banner.jpg", banner)
+	image_clip = ImageClip("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/temp/banner.jpg")
+	video_clip = image_clip.set_audio(audio_clip)
+	video_clip.duration = audio_clip.duration
+	video_clip.fps = 30
+	video_clip.write_videofile("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/temp/"+ timenow  + '.mp4')
+	#video_clip.export(buffer, format="mp4")
+	
+	#nextcordFile = nextcord.File(fp=buffer ,filename=timenow + '.mp4')
+	nextcordFile = nextcord.File("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/temp/"+ timenow  + '.mp4')
+
+	await message.reply(content="", file=nextcordFile)
     #new = io.BytesIO()
 	#await bot.loop.run_in_executor(None, functools.partial(x.export, new, format='wav'))
 
