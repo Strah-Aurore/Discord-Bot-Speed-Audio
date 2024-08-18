@@ -17,7 +17,6 @@ import cv2
 import numpy
 from unidecode import unidecode
 from datetime import timezone, datetime, timedelta
-
 # test
 from config import BOT
 from pydub import AudioSegment
@@ -50,7 +49,7 @@ async def speedup_message(message, speed):
 	voice_file_bytes = await message.attachments[0].read()
 	voice_file = io.BytesIO(voice_file_bytes)
 	avatar_bytes = await message.author.avatar.read()
-	banner = cv2.imread("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/ImageToVideo.jpg")
+	banner = cv2.imread("./ImageToVideo.jpg")
 	BytesToImg = numpy.fromstring(io.BytesIO(avatar_bytes).read(), numpy.uint8)
 	avatar_cv = cv2.resize(cv2.imdecode(BytesToImg, cv2.IMREAD_COLOR),(100,100), cv2.INTER_LINEAR)
 	banner[20:120,20:120]=avatar_cv
@@ -75,22 +74,28 @@ async def speedup_message(message, speed):
 
 	buffer = io.BytesIO()
 	timenow = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
-	final.export("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/temp/"+ timenow +".mp3",format="mp3")
+	final.export("./"+ timenow +".mp3",format="mp3")
 	banner = cv2.putText(banner, "Duration : "+ str(pydub.AudioSegment.__len__(final)/1000) + "s", (220,70), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255,255,255), 1, cv2.LINE_AA)
 
-	audio_clip = AudioFileClip("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/temp/"+ timenow +".mp3")
-	cv2.imwrite("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/temp/banner.jpg", banner)
-	image_clip = ImageClip("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/temp/banner.jpg")
+	audio_clip = AudioFileClip("./"+ timenow +".mp3")
+	cv2.imwrite("./banner.jpg", banner)
+	image_clip = ImageClip("./banner.jpg")
+	
 	video_clip = image_clip.set_audio(audio_clip)
 	video_clip.duration = audio_clip.duration
 	video_clip.fps = 30
-	video_clip.write_videofile("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/temp/"+ timenow  + '.mp4')
+
 	#video_clip.export(buffer, format="mp4")
-	
 	#nextcordFile = nextcord.File(fp=buffer ,filename=timenow + '.mp4')
-	nextcordFile = nextcord.File("C:/Users/Aurore/Documents/project/Discord-Bot-Speed-Audio/temp/"+ timenow  + '.mp4')
+	video_clip.write_videofile("./"+ timenow  + '.mp4')
+	nextcordFile = nextcord.File("./"+ timenow  + '.mp4')
+	
 
 	await message.reply(content="", file=nextcordFile)
+
+	os.remove("./"+ timenow  + '.mp3')
+	os.remove("./banner.jpg")
+	os.remove("./"+ timenow  + '.mp4')
     #new = io.BytesIO()
 	#await bot.loop.run_in_executor(None, functools.partial(x.export, new, format='wav'))
 
